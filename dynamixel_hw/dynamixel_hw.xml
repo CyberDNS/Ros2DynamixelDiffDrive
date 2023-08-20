@@ -1,0 +1,9 @@
+<library path="dynamixel_hw">
+  <class name="dynamixel_hw/DynamixelHw"
+         type="dynamixel_hw::DynamixelHw"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      The ros2_control...
+    </description>
+  </class>
+</library>
