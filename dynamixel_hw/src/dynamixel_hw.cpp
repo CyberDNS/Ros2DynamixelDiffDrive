@@ -161,10 +161,14 @@ namespace dynamixel_hw
     left_wheel_.vel = left_vel;
     left_wheel_.pos += left_vel * delta_seconds; // Integrate velocity to get position
 
+    RCLCPP_DEBUG(rclcpp::get_logger("DynamixelHw"), "L: %f", left_wheel_.pos);
+
     // Update for the right wheel
     double right_vel = right_wheel_.get_velocity();
     right_wheel_.vel = right_vel;
     right_wheel_.pos += right_vel * delta_seconds; // Integrate velocity to get position
+
+    RCLCPP_DEBUG(rclcpp::get_logger("DynamixelHw"), "R: %f", right_wheel_.pos);
 
     return return_type::OK;
   }
