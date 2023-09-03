@@ -12,6 +12,7 @@
 #define ADDR_MOVING_SPEED 32   // 2 byte
 #define ADDR_PRESENT_SPEED 38  // 2 byte
 
+#define MIN_MOVING_SPEED_VALUE 80
 #define MAX_MOVING_SPEED_VALUE 1023
 #define STOP 0
 #define REVERSE_OFFSET 1024
@@ -108,26 +109,18 @@ namespace dynamixel_hw
                 RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_IDENTIFIER), "Succeeded to set Wheel rotation. %u", dynamixel_vel);
             }
         }
+        
+        vel = convert_to_ros_control_vel(dynamixel_vel);
+
+        RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_IDENTIFIER), "%s: requested=%f executed=%f", name.c_str(), velocity, vel);
+
 
         return true;
     }
 
     double DynamixelWheel::get_velocity()
     {
-        uint16_t dynamixel_vel;
-
-        bool is_success = connection_.read2ByteTxRx(dynamixel_id_, ADDR_PRESENT_SPEED, &dynamixel_vel);
-        if (!is_success)
-        {
-            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_IDENTIFIER), "Failed to read Wheel rotation.");
-            return vel;
-        }
-        else
-        {
-            RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_IDENTIFIER), "Succeeded to read Wheel rotation. %u", dynamixel_vel);
-        }
-
-        return convert_to_ros_control_vel(dynamixel_vel);
+        return vel;
     }
 
     uint16_t DynamixelWheel::convert_to_dynamixel_vel(double rad_vel)
@@ -135,6 +128,12 @@ namespace dynamixel_hw
         int16_t dynamixel_vel = this->inverted_ * static_cast<int>(std::round(CONVERSION_FACTOR * rad_vel));
         dynamixel_vel = std::clamp(dynamixel_vel, static_cast<int16_t>(-1 * MAX_MOVING_SPEED_VALUE), static_cast<int16_t>(MAX_MOVING_SPEED_VALUE));
         int16_t dynamixel_value = dynamixel_vel;
+
+        if (std::abs(dynamixel_value) < MIN_MOVING_SPEED_VALUE)
+        {
+            dynamixel_value = 0;
+        }
+
         if (dynamixel_value < 0)
         {
             dynamixel_value = REVERSE_OFFSET - dynamixel_value;
@@ -146,9 +145,15 @@ namespace dynamixel_hw
     double DynamixelWheel::convert_to_ros_control_vel(uint16_t dynamixel_vel)
     {
         int16_t dynamixel_value = static_cast<int16_t>(dynamixel_vel);
+
         if (dynamixel_value >= REVERSE_OFFSET)
         {
             dynamixel_value = REVERSE_OFFSET - dynamixel_value;
+        }
+
+        if (std::abs(dynamixel_value) < MIN_MOVING_SPEED_VALUE)
+        {
+            dynamixel_value = 0;
         }
 
         return (this->inverted_ * dynamixel_value) / CONVERSION_FACTOR;
