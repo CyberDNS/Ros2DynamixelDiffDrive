@@ -43,6 +43,14 @@ namespace dynamixel_hw
 {
   class DynamixelHw : public hardware_interface::SystemInterface
   {
+    struct Config
+    {
+      std::string left_wheel_name = "";
+      std::string right_wheel_name = "";
+      std::string usb_port = "";
+      int baud_rate = 0;
+    };
+
   public:
     RCLCPP_SHARED_PTR_DEFINITIONS(DynamixelHw)
 
@@ -72,6 +80,8 @@ namespace dynamixel_hw
     dynamixel_hw::DynamixelWheel right_wheel_;
 
     dynamixel_hw::DynamixelConnection dynamixel_connection_;
+
+    Config config_;
   };
 
 } // namespace dynamixel_hw

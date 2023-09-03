@@ -1,17 +1,3 @@
-// Copyright 2020 Yutaka Kondo <yutaka.kondo@youtalk.jp>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include "dynamixel_hw/dynamixel_hw.hpp"
 
 #include <chrono>
@@ -27,32 +13,6 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
 
-#define ADDR_TORQUE_ENABLE 24  // 1 byte
-#define ADDR_CW_ANGLE_LIMIT 6  // 2 byte
-#define ADDR_CCW_ANGLE_LIMIT 8 // 2 byte
-#define ADDR_MOVING_SPEED 32   // 2 byte
-
-#define LEFT_SERVO_ID 10
-#define RIGHT_SERVO_ID 11
-
-#define LEFT_SERVO_NAME "left_wheel_joint"
-#define RIGHT_SERVO_NAME "right_wheel_joint"
-
-#define LEFT_SERVO_INVERT false
-#define RIGHT_SERVO_INVERT true
-
-#define MIN_MOVING_SPEED_VALUE 125
-#define MAX_MOVING_SPEED_VALUE 1023
-#define STOP 0
-#define REVERSE_OFFSET 1024
-
-// Protocol version
-#define PROTOCOL_VERSION 1.0 // Default Protocol version of DYNAMIXEL X series.
-
-// Default setting
-#define BAUDRATE 1000000           // Default Baudrate of DYNAMIXEL X series
-#define DEVICE_NAME "/dev/ttyUSB0" // [Linux]: "/dev/ttyUSB*", [Windows]: "COM*"
-
 namespace dynamixel_hw
 {
 
@@ -63,6 +23,11 @@ namespace dynamixel_hw
     {
       return CallbackReturn::ERROR;
     }
+
+    config_.usb_port = info_.hardware_parameters["usb_port"];
+    config_.baud_rate = std::stoi(info_.hardware_parameters["baud_rate"]);
+    config_.left_wheel_name = info_.hardware_parameters["left_wheel_name"];
+    config_.right_wheel_name = info_.hardware_parameters["right_wheel_name"];
 
     for (const hardware_interface::ComponentInfo &joint : info_.joints)
     {
@@ -110,10 +75,22 @@ namespace dynamixel_hw
             joint.state_interfaces[1].name.c_str(), hardware_interface::HW_IF_VELOCITY);
         return hardware_interface::CallbackReturn::ERROR;
       }
-    }
 
-    left_wheel_.init(LEFT_SERVO_NAME, LEFT_SERVO_ID, false);
-    right_wheel_.init(RIGHT_SERVO_NAME, RIGHT_SERVO_ID, true);
+      if (joint.name == config_.left_wheel_name)
+      {
+        std::string boolStr = joint.parameters.at("invert");
+        std::transform(boolStr.begin(), boolStr.end(), boolStr.begin(), [](unsigned char c){ return std::tolower(c); });
+
+        left_wheel_.init(joint.name, std::stoi(joint.parameters.at("id")), boolStr == "true");
+      }
+      if (joint.name == config_.right_wheel_name)
+      {
+        std::string boolStr = joint.parameters.at("invert");
+        std::transform(boolStr.begin(), boolStr.end(), boolStr.begin(), [](unsigned char c){ return std::tolower(c); });
+
+        right_wheel_.init(joint.name, std::stoi(joint.parameters.at("id")), boolStr == "true");
+      }
+    }
 
     return CallbackReturn::SUCCESS;
   }
@@ -154,7 +131,7 @@ namespace dynamixel_hw
   {
     RCLCPP_INFO(rclcpp::get_logger("DynamixelHw"), "start");
 
-    dynamixel_connection_.connect(DEVICE_NAME, BAUDRATE);
+    dynamixel_connection_.connect(config_.usb_port, config_.baud_rate);
 
     left_wheel_.setup(dynamixel_connection_);
     right_wheel_.setup(dynamixel_connection_);

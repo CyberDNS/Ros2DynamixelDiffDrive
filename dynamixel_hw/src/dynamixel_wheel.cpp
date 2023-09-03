@@ -12,7 +12,6 @@
 #define ADDR_MOVING_SPEED 32   // 2 byte
 #define ADDR_PRESENT_SPEED 38  // 2 byte
 
-#define MIN_MOVING_SPEED_VALUE 125
 #define MAX_MOVING_SPEED_VALUE 1023
 #define STOP 0
 #define REVERSE_OFFSET 1024
